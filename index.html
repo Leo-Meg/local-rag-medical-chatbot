@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Assistant Vision — démo du widget RAG</title>
+
+  <link rel="stylesheet" href="chatbox/css/chatbox.css" />
+
+  <style>
+    /* Minimal host page — only here to demonstrate the widget in isolation. */
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: #f4f6f9;
+      color: #1a3557;
+    }
+    .demo-card {
+      max-width: 34rem;
+      padding: 2.5rem;
+      text-align: center;
+    }
+    .demo-card h1 { font-size: 1.5rem; margin: 0 0 .75rem; }
+    .demo-card p  { line-height: 1.6; color: #44536b; }
+    .demo-card code {
+      background: #e7ecf3;
+      padding: .1em .35em;
+      border-radius: 4px;
+      font-size: .9em;
+    }
+  </style>
+</head>
+<body>
+
+  <main class="demo-card">
+    <h1>Démo du widget — Assistant Vision</h1>
+    <p>
+      Cette page n'existe que pour héberger le widget de chat. Cliquez sur la bulle
+      en bas à droite pour l'ouvrir.
+    </p>
+    <p>
+      Le widget interroge une instance locale d'AnythingLLM configurée dans
+      <code>chatbox/js/config.js</code>. Sans backend démarré, l'indicateur de statut
+      reste rouge et le widget renvoie son message de repli.
+    </p>
+  </main>
+
+  <!-- ===== Chatbot widget ===== -->
+
+  <button id="rag-chat-bubble" aria-label="Ouvrir l'assistant virtuel" title="Assistant Vision">
+    <svg id="bubble-icon-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+    </svg>
+    <svg id="bubble-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="display:none;">
+      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
+    <span class="bubble-badge" id="chat-badge"></span>
+  </button>
+
+  <div id="rag-chat-window" role="dialog" aria-label="Assistant virtuel du Cabinet Vision Démo" aria-modal="true">
+
+    <div class="chat-header">
+      <div class="chat-header-logo">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 16C3 16 8.5 7 16 7C23.5 7 29 16 29 16C29 16 23.5 25 16 25C8.5 25 3 16 3 16Z"
+                stroke="white" stroke-width="1.8" fill="none" stroke-linejoin="round"/>
+          <circle cx="16" cy="16" r="4.5" stroke="white" stroke-width="1.8" fill="none"/>
+          <circle cx="17.5" cy="14.5" r="1.2" fill="white"/>
+        </svg>
+      </div>
+      <div class="chat-header-text">
+        <div class="chat-header-title">Assistant Vision</div>
+        <div class="chat-header-subtitle">Cabinet Vision Démo</div>
+      </div>
+      <div class="chat-status">
+        <span class="chat-status-dot" id="status-dot"></span>
+        <span id="status-label">En ligne</span>
+      </div>
+      <button id="chat-close-btn" aria-label="Fermer le chat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="chat-messages" id="chat-messages" aria-live="polite" aria-atomic="false">
+
+      <div class="chat-welcome">
+        <div class="chat-welcome-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 21C12 21 5 14.5 5 9.5C5 6 8.1 3 12 3C15.9 3 19 6 19 9.5C19 14.5 12 21 12 21Z"/>
+            <circle cx="12" cy="9.5" r="2.5"/>
+          </svg>
+        </div>
+        <h4>Bonjour, je suis l'assistant du Cabinet&nbsp;Vision&nbsp;Démo</h4>
+        <p>Je réponds à vos questions sur nos soins, horaires et équipements.<br>Je ne remplace pas un avis médical.</p>
+      </div>
+
+      <div class="chat-suggestions" id="chat-suggestions">
+        <button class="chat-suggestion-btn" data-question="Quels sont vos horaires d'ouverture ?">🕐 Horaires</button>
+        <button class="chat-suggestion-btn" data-question="Comment prendre rendez-vous ?">📅 Rendez-vous</button>
+        <button class="chat-suggestion-btn" data-question="Quelles pathologies traitez-vous ?">👁 Pathologies</button>
+        <button class="chat-suggestion-btn" data-question="Où est situé le cabinet ?">📍 Adresse</button>
+      </div>
+
+    </div>
+
+    <div class="chat-input-area">
+      <div class="chat-input-row">
+        <textarea
+          id="chat-input"
+          placeholder="Posez votre question…"
+          rows="1"
+          aria-label="Votre message"
+          maxlength="500"
+        ></textarea>
+        <button id="chat-send-btn" aria-label="Envoyer" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+      <p class="chat-footer-note">Informations non médicales uniquement — En cas d'urgence, appelez le 15</p>
+    </div>
+
+  </div>
+
+  <!-- Configuration (git-ignored, copy from config.example.js) -->
+  <script src="chatbox/js/config.js"></script>
+  <!-- Chatbot logic -->
+  <script src="chatbox/js/script.js"></script>
+
+</body>
+</html>

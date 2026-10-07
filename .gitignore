@@ -1,0 +1,15 @@
+# Runtime configuration (contains the AnythingLLM API key)
+chatbox/js/config.js
+
+# AnythingLLM local storage
+anythingllm_storage/
+
+# Python environments and caches
+__pycache__/
+*.pyc
+venv/
+.venv/
+.env
+
+# OS noise
+.DS_Store
